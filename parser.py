@@ -1,35 +1,43 @@
 import logging, re
+from datetime import datetime
 
 log = logging
 
 #mini regexs
-ip_r = r'([\d\.]+:\d+)'
-name_r = r'"(.+?)<\d+><((STEAM_0:[01]:\d+)|(Console))><(.*?)>"'
-pos_r = r'(((-?\d+) ?)+)'
-params_r = r'((\((.+?) "(.+?)"\) ?)+)'
+def get_ip_r(i=0):
+    return r'(?P<ipaddr_%d>[\d\.]+:\d+)' % i
+def get_name_r(i=0):
+    return r'(?P<name_%d>.+?)<\d+><(?P<steamid_%d>(STEAM_0:[01]:\d+)'\
+        '|(Console))><(.*?)>' % (i, i)
+def get_pos_r(i=0):
+    return r'(?P<pos_%d>((-?\d+) ?)+)' % i
+params_r = r'(?P<params>(\((.+?) "(.+?)"\) ?)+)'
 #server regexs
-log_start_r = r'Log file started \(file "(.+?)"\) \(game "(.+?)"\) \(version '\
-    '"(\d+)"\)'
-rcon_r = r'rcon from "%s": command "(.+?)"' % ip_r
+log_start_r = r'Log file started \(file "(?P<file>.+?)"\) \(game "(?P<game>.+?)"\) \(version '\
+    '"(?P<version>\d+)"\)'
+rcon_r = r'rcon from "%s": command "(?P<command>.+?)"' % get_ip_r()
 #team/world regexs
-world_trigger_r = r'World triggered "(\w+)"( reason "(.+?)")?'
-team_trigger_r = r'Team "(\w+)" triggered "(\w+)" %s' % params_r
-team_score_r = r'Team "(\w+)" (final|current) score "(\d+)" with "(\d+)" players'
+world_trigger_r = r'World triggered "(?P<event>\w+)"( reason "(?P<reason>.+?)")?'
+team_trigger_r = r'Team "(?P<team>\w+)" triggered "(\w+)" %s' % params_r
+team_score_r = r'Team "(?P<team>\w+)" (?P<score_type>final|current) score "(?P<score>\d+)"'\
+    ' with "(?P<num_players>\d+)" players'
 #player regexs
-say_r = r'%s say ".+?"' % name_r
-say_team_r = r'%s say_team ".+?"' % name_r
-connected_r = r'%s connected, address "%s"' % (name_r, ip_r)
-disconnected_r = r'%s disconnected( \(reason ".+?"\))?' % name_r
-validated_r = r'%s STEAM USERID validated' % name_r
-enter_r = r'%s entered the game' % name_r
-join_r = r'%s joined team "(\w+)"' % name_r
-change_r = r'%s changed role to "(\w+)"' % name_r
-trigger_r = r'%s triggered "(.+?)"( (against %s )?%s)?' % (name_r, name_r, params_r)
-pick_up_r = r'%s picked up item "(.+?)"' % name_r
-killed_r = r'%s killed %s with "(\w+)" (\(customkill "(.+?)"\) )?\(attacker_position "%s"\) '\
-    '\(victim_position "%s"\)' % (name_r, name_r, pos_r, pos_r)
-suicide_r = '%s committed suicide with "(\w+)"( '\
-    '\(attacker_position "%s"\))?' % (name_r, pos_r)
+say_r = r'"%s" say "(?P<message>.+?)"' % get_name_r()
+say_team_r = r'"%s" say_team "(?P<message>.+?)"' % get_name_r()
+connected_r = r'"%s" connected, address "%s"' % (get_name_r(), get_ip_r())
+disconnected_r = r'"%s" disconnected( \(reason "(?P<reason>.+?)"\))?' % get_name_r()
+validated_r = r'"%s" STEAM USERID validated' % get_name_r()
+enter_r = r'"%s" entered the game' % get_name_r()
+join_r = r'"%s" joined team "(?P<team>\w+)"' % get_name_r()
+change_r = r'"%s" changed role to "(?P<role>\w+)"' % get_name_r()
+trigger_r = r'"%s" triggered "(?P<event>.+?)"( (against "%s" )?%s)?' % (get_name_r(0),
+    get_name_r(1), params_r)
+pick_up_r = r'"%s" picked up item "(?P<item>.+?)"' % get_name_r()
+killed_r = r'"%s" killed "%s" with "(?P<weapon>\w+)" (\(customkill "(?P<type>.+?)"\) )?\(attacker_position "%s"\) '\
+    '\(victim_position "%s"\)' % (get_name_r(0), get_name_r(1),
+        get_pos_r(0), get_pos_r(1))
+suicide_r = '"%s" committed suicide with "(?P<thing>\w+)"( '\
+    '\(attacker_position "%s"\))?' % (get_name_r(), get_pos_r())
 
 #Now for the compiled patterns
 log_start_p = re.compile(log_start_r)
@@ -79,9 +87,12 @@ class LogParser():
         Read one event
         """
         items = line.split(None, 4)
+        _datetime = datetime.strptime('%s %s' % (items[1], items[3][:-1]),
+            '%m/%d/%Y %H:%M:%S')
         date = items[1]
         time = items[3][:-1]
         event = items[4]
+        event_dict = {'datetime':_datetime}
         #check what the event matches
         if log_start_p.match(event):
             pass
