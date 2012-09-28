@@ -34,7 +34,7 @@ validated_r = r'"%s" STEAM USERID validated' % get_name_r()
 enter_r = r'"%s" entered the game' % get_name_r()
 join_r = r'"%s" joined team "(?P<team>\w+)"' % get_name_r()
 change_r = r'"%s" changed role to "(?P<role>\w+)"' % get_name_r()
-trigger_r = r'"%s" triggered "(?P<event>.+?)"( (against "%s" )?%s)?' % (get_name_r(0),
+trigger_r = r'"%s" triggered "(?P<event>.+?)"(?: against "%s")?(?: %s)?' % (get_name_r(0),
         get_name_r(1), params_r)
 pick_up_r = r'"%s" picked up item "(?P<item>.+?)"' % get_name_r()
 killed_r = r'"%s" killed "%s" with "(?P<weapon>\w+)" (\(customkill "(?P<type>.+?)"\) )?\(attacker_position "%s"\) '\
