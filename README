@@ -1,0 +1,55 @@
+tf2-loggr
+=========
+
+A TF2 log parser and aggregation tool
+
+Features
+--------
+
+-   Log parsing and aggregation
+-   Basic Statistics
+    -   Kill Matrix
+    -   Weapon Kill/Death Matrix
+    -   Item Pick Up Matrix
+    -   Kills/Assists/Deaths
+    -   Kills & Assists per Death
+    -   Kills & Assists per Minute
+    -   Damage
+    -   Damage per Death
+    -   Damage per Minute (while alive & total time)
+    -   Headshots
+    -   Backstabs
+    -   Capture Points Blocked
+    -   Capture Points Captured
+    -   Intel Defends
+    -   Intel Captures
+-   Heal Statistics
+    -   Heal Matrix
+    -   Healing/Ubers
+    -   Heal per Death
+    -   Heal per Minute (while alive & total time)
+    -   Ubers per Death
+    -   Ubers per Minute (while alive & total time)
+-   Building Statistics (?)
+    -   Damage
+    -   Kills
+    -   Time Alive
+-   Heatmaps
+    -   Filtering by:
+        -   Point Capture State
+        -   Class
+        -   Time of Round
+    -   Damage (?)
+    -   Item Pick Up (?)
+    -   Kills
+    -   Healing (?)
+    -   Sentry Gun Placement (?)
+-   Chat Log
+-   Per Round Statistics
+-   Output via
+    -   JSON
+    -   CSV
+
+(?) - feature may or may not be possible with current sourcemods.
+      Investigation is needed in the feasibility of adding the 
+      needed data to existing log mods.
