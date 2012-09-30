@@ -1,4 +1,6 @@
+import codecs
 from parser import TF2LogParser
+
 class Stats():
     def __init__(self):
         """
@@ -7,11 +9,13 @@ class Stats():
         """
         self.id_all_names = {}
         self.id_name = {}
+        self.id_team = {}
         """
         id to kills dict
         {id(attkr):{id(victim):num_kills}
         """
         self.id_kill_matrix = {}
+        self.id_assist_matrix = {}
         """
         id to suicide matrix
         for accurate death count
@@ -38,40 +42,32 @@ class Stats():
         raise AttributeError(name)
 
     def aggregate(self, other):
-        #update kill matrix
-        for k, v in other.id_kill_matrix.items():
-            if k not in self.id_kill_matrix:
-                self.id_kill_matrix[k] = {}
-            for pk, pv in v.items():
-                if pk not in self.id_kill_matrix[k]:
-                    self.id_kill_matrix[k][pk] = 0
-                self.id_kill_matrix[k][pk] += pv
-        for k, v in other.id_heal_matrix.items():
-            if k not in self.id_heal_matrix:
-                self.id_heal_matrix[k] = {}
-            for pk, pv in v.items():
-                if pk not in self.id_heal_matrix[k]:
-                    self.id_heal_matrix[k][pk] = 0
-                self.id_heal_matrix[k][pk] += pv
-        for k, v in other.id_suicide.items():
-            if k not in self.id_suicide:
-                self.id_suicide[k] = 0
-            self.id_suicide[k] += v
-        for k, v in other.id_damage.items():
-            if k not in self.id_damage:
-                self.id_damage[k] = 0
-            self.id_damage[k] += v
-        for k, v in other.id_pick_ups.items():
-            if k not in self.id_pick_ups:
-                self.id_pick_ups[k] = {}
-            for ik, iv in v.items():
-                if ik not in self.id_pick_ups[k]:
-                    self.id_pick_ups[k][ik] = 0
-                self.id_pick_ups[k][ik] += iv
-        for k, v in other.score.items():
-            if k not in self.score:
-                self.score[k] = 0
-            self.score[k] += v
+        def aggregate_dict(s_dict, o_dict):
+            for k, v in o_dict.items():
+                if k not in s_dict:
+                    s_dict[k] = 0
+                s_dict[k] += v
+        def aggregate_dual_dict(s_dict, o_dict):
+            for k, v in o_dict.items():
+                if k not in s_dict:
+                    s_dict[k] = {}
+                aggregate_dict(s_dict[k], v)
+        aggregate_dual_dict(self.id_kill_matrix,
+                other.id_kill_matrix)
+        aggregate_dual_dict(self.id_assist_matrix,
+                other.id_assist_matrix)
+        aggregate_dual_dict(self.id_heal_matrix,
+                other.id_heal_matrix)
+        aggregate_dict(self.id_suicide,
+                other.id_suicide)
+        aggregate_dict(self.id_damage,
+                other.id_damage)
+        aggregate_dual_dict(self.id_pick_ups,
+                other.id_pick_ups)
+        aggregate_dict(self.score,
+                other.score)
+        self.id_name.update(other.id_name)
+        self.id_team.update(other.id_team)
         self.length += other.length
 
     def team_score(self, team):
@@ -79,7 +75,19 @@ class Stats():
             self.score[team] = 0
         self.score[team] += 1
 
-    def player_killed(self, attacker, victim):
+    def update_player_dict(self, player):
+        if player['steamid'] not in self.id_name:
+            self.id_name[player['steamid']] = player['name']
+        if player['team'] != None:
+            self.id_team[player['steamid']] = player['team']
+
+    def player_killed(self, attacker, victim, k_type=None):
+        self.update_player_dict(attacker)
+        self.update_player_dict(victim)
+        if k_type != None:
+            #fucking dead ringer
+            if k_type == 'feign_death':
+                return
         if attacker['steamid'] not in self.id_kill_matrix:
             self.id_kill_matrix[attacker['steamid']] = {}
         attacker_dict = self.id_kill_matrix[attacker['steamid']]
@@ -87,12 +95,29 @@ class Stats():
             attacker_dict[victim['steamid']] = 0
         attacker_dict[victim['steamid']] += 1
 
+    def player_assisted(self, assister, victim, k_type=None):
+        self.update_player_dict(assister)
+        self.update_player_dict(victim)
+        if k_type != None:
+            #fucking dead ringer
+            if k_type == 'feign_death':
+                return
+        if assister['steamid'] not in self.id_assist_matrix:
+            self.id_assist_matrix[assister['steamid']] = {}
+        assister_dict = self.id_assist_matrix[assister['steamid']]
+        if victim['steamid'] not in assister_dict:
+            assister_dict[victim['steamid']] = 0
+        assister_dict[victim['steamid']] += 1
+
     def player_damaged(self, player, amount):
+        self.update_player_dict(player)
         if player['steamid'] not in self.id_damage:
             self.id_damage[player['steamid']] = 0
         self.id_damage[player['steamid']] += amount
 
     def player_healed(self, healer, target, amount):
+        self.update_player_dict(healer)
+        self.update_player_dict(target)
         if healer['steamid'] not in self.id_heal_matrix:
             self.id_heal_matrix[healer['steamid']] = {}
         healer_dict = self.id_heal_matrix[healer['steamid']]
@@ -101,6 +126,7 @@ class Stats():
         healer_dict[target['steamid']] += amount
 
     def player_picked_up(self, player, item):
+        self.update_player_dict(player)
         if player['steamid'] not in self.id_pick_ups:
             self.id_pick_ups[player['steamid']] = {}
         p_pickups = self.id_pick_ups[player['steamid']]
@@ -109,21 +135,71 @@ class Stats():
         p_pickups[item] += 1
 
     def player_suicided(self, player):
+        self.update_player_dict(player)
         if player['steamid'] not in self.id_suicide:
             self.id_suicide[player['steamid']] = 0
         self.id_suicide[player['steamid']] += 1
 
-    def get_player_stats(self, player):
-        pass
+    def get_player_deaths(self, player):
+        deaths = {player:self.id_suicide.get(player, 0)}
+        for k, v in self.id_kill_matrix.items():
+            if player in v:
+                deaths[k] = v[player]
+        return deaths
+
+    def get_simple_player_stats(self, player):
+        stats = {}
+        stats['kills'] = (sum(self.id_kill_matrix[player].values())
+                if player in self.id_kill_matrix else 0)
+        stats['deaths'] = sum(self.get_player_deaths(player).values())
+        stats['assists'] = (sum(self.id_assist_matrix[player].values())
+                if player in self.id_assist_matrix else 0)
+        stats['damage'] = self.id_damage.get(player, 0)
+        return stats
 
     def get_team_stats(self, team):
         pass
 
-    def get_stats(self, s_format='JSON'):
-        pass
+    def write_stats(self, out_file, s_format='json'):
+        f = codecs.open(out_file, 'w', 'utf-8')
+        #simple stats
+        simple_stats = {}
+        for steamid, name in self.id_name.items():
+            simple_stats[name] = self.get_simple_player_stats(steamid)
+        #kill matrix
+        def cmp_player(player_id):
+            return (self.id_team[player_id], self.id_name[player_id])
+        players = sorted(self.id_name.keys(), key=cmp_player)
+        kill_mat = []
+        kill_mat.append([])
+        kill_mat[0].append('')
+        kill_mat[0].extend(map(lambda x: self.id_name[x], players))
+        for i, player in enumerate(players):
+            kill_mat.append([])
+            kill_mat[i+1].append(self.id_name[player])
+            kill_mat[i+1].extend([0] * len(players))
+            if player in self.id_kill_matrix:
+                for victim, num in self.id_kill_matrix[player].items():
+                    kill_mat[i+1][players.index(victim)+1] = num
+            kill_mat[i+1][i+1] = ''
+        if s_format == 'csv':
+            f.write('Simple Stats\n')
+            f.write('Name,Kills,Assists,Deaths,Damage\n')
+            for name, s_dict in simple_stats.items():
+                f.write('%s,%s,%s,%s,%s\n' % (name, s_dict['kills'],
+                        s_dict['assists'], s_dict['deaths'],
+                        s_dict['damage']))
+            f.write('\nKill Matrix - rows = kills cols = deaths\n')
+            #make the kill matrix
+            for row in kill_mat:
+                f.write(u','.join(map(lambda x: unicode(x), row)) + '\n')
 
 class TF2LogAggregator():
     def __init__(self):
+        self.total_stats = Stats()
+        self.round_stats = []
+
+    def clear(self):
         self.total_stats = Stats()
         self.round_stats = []
 
@@ -132,6 +208,7 @@ class TF2LogAggregator():
         round_num = 0
         in_round = False
         teams = {}
+        last_kill_type = ''
         for event in parser.read():
             if (event['event_name'] == 'world_trigger' and
                         event['event'] == 'Round_Start'):
@@ -162,7 +239,8 @@ class TF2LogAggregator():
                 #let's do some aggregating!
                 if event['event_name'] == 'player_killed':
                     self.round_stats[round_num-1].player_killed(event['attacker'],
-                        event['victim'])
+                        event['victim'], event['type'])
+                    last_kill_type = event['type']
                 elif event['event_name'] == 'player_suicided':
                     self.round_stats[round_num-1].player_suicided(event['player'])
                 elif event['event_name'] == 'player_picked_up':
@@ -175,3 +253,7 @@ class TF2LogAggregator():
                     elif event['event'] == 'healed':
                         self.round_stats[round_num-1].player_healed(event['player'],
                                 event['target'], int(event['healing']))
+                    elif event['event'] == 'kill assist':
+                        self.round_stats[round_num-1].player_assisted(event['player'],
+                                event['target'], last_kill_type)
+        self.total_stats.aggregate(self.round_stats[-1])

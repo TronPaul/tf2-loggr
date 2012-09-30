@@ -1,4 +1,4 @@
-import logging, re
+import logging, re, codecs
 from datetime import datetime
 
 log = logging
@@ -8,7 +8,7 @@ def get_ip_r(i=0):
     return r'(?P<ipaddr_%d>[\d\.]+:\d+)' % i
 def get_name_r(i=0):
     return r'(?P<name_%d>.+?)<\d+><(?P<steamid_%d>(STEAM_0:[01]:\d+)'\
-        '|(Console))><(.*?)>' % (i, i)
+        '|(Console))><(?P<team_%d>.*?)>' % (i, i, i)
 def get_pos_r(i=0):
     return r'(?P<pos_%d>((-?\d+) ?)+)' % i
 params_r = r'(?P<params>(?:\((?:.+?) "(?:.+?)"\) ?)+)'
@@ -68,6 +68,7 @@ def get_player_info(matcher, player_num=0):
     p_dict = {}
     p_dict['name'] = matcher.group('name_%d' % player_num)
     p_dict['steamid'] = matcher.group('steamid_%d' % player_num)
+    p_dict['team'] = matcher.group('team_%d' % player_num)
     return p_dict
 
 def get_params(matcher):
@@ -87,7 +88,7 @@ class TF2LogParser():
 
     def open(self, filename):
         self._filename = filename
-        self._file = open(filename)
+        self._file = codecs.open(filename, 'r', 'utf-8')
 
     def read(self):
         """
@@ -201,6 +202,7 @@ class TF2LogParser():
             event_dict['victim'] = get_player_info(m, 1)
             event_dict['attacker']['pos'] = m.group('pos_0')
             event_dict['victim']['pos'] = m.group('pos_1')
+            event_dict['type'] = m.group('type')
         elif suicide_p.match(event):
             event_dict['event_name'] = 'player_suicided'
             m = suicide_p.match(event)
@@ -208,5 +210,6 @@ class TF2LogParser():
             event_dict['player']['pos'] = m.group('pos_0')
         else:
             log.error("""The following event text did not match\n%s""" % event)
-            raise Exception #TODO make our own exception
+            event_dict['event_name'] = None
+            #raise Exception #TODO make our own exception
         return event_dict
