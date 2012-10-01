@@ -257,3 +257,11 @@ class TF2LogAggregator():
                         self.round_stats[round_num-1].player_assisted(event['player'],
                                 event['target'], last_kill_type)
         self.total_stats.aggregate(self.round_stats[-1])
+
+if __name__ == '__main__':
+    import optparse
+    a = TF2LogAggregator()
+    parser = optparse.OptionParser()
+    options, (log, out) = parser.parse_args()
+    a.aggregate(log)
+    a.total_stats.write_stats(out, s_format='csv')
