@@ -1,5 +1,5 @@
 import codecs
-from parser import TF2LogParser
+from tfparser import TF2LogParser
 
 class Stats():
     def __init__(self):
@@ -258,10 +258,3 @@ class TF2LogAggregator():
                                 event['target'], last_kill_type)
         self.total_stats.aggregate(self.round_stats[-1])
 
-if __name__ == '__main__':
-    import optparse
-    a = TF2LogAggregator()
-    parser = optparse.OptionParser()
-    options, (log, out) = parser.parse_args()
-    a.aggregate(log)
-    a.total_stats.write_stats(out, s_format='csv')

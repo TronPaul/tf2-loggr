@@ -56,3 +56,9 @@ Features
 
 Very few features are completed at this time.  When more are I will 
 start marking which are complete and which aren't.
+
+Usage
+-----
+
+From this directory run `python tf2loggr [LOGFILE] [OUTFILE]` this
+will make a csv formatted stats file at OUTFILE.
