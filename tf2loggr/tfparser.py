@@ -95,13 +95,10 @@ class TF2LogParser():
         Read all events
         """
         for line in self._file:
+            if len(line) == 0:
+                continue
+            # TODO: fix random linebreak problems
             yield self._readevent(line)
-
-    def readline(self):
-        """
-        Read one event
-        """
-        return self._readevent(self._file.readline())
 
     def _readevent(self, line):
         """
@@ -110,8 +107,6 @@ class TF2LogParser():
         items = line.split(None, 4)
         _datetime = datetime.strptime('%s %s' % (items[1], items[3][:-1]),
             '%m/%d/%Y %H:%M:%S')
-        date = items[1]
-        time = items[3][:-1]
         event = items[4]
         event_dict = {'datetime':_datetime}
         #check what the event matches
