@@ -105,6 +105,8 @@ class TF2LogParser():
         Read one event
         """
         items = line.split(None, 4)
+        if len(items) != 5:
+            raise Exception
         _datetime = datetime.strptime('%s %s' % (items[1], items[3][:-1]),
             '%m/%d/%Y %H:%M:%S')
         event = items[4]
