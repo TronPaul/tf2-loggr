@@ -187,9 +187,8 @@ class Stats():
         
     def get_team_stats(self, team):
         pass
-        
-    def write_stats(self, out_file, s_format='json'):
-        f = codecs.open(out_file, 'w', 'utf-8')
+
+    def write_stats(self, fp, s_format='json'):
         #simple stats
         simple_stats = {}
         adv_stats = {}
@@ -213,26 +212,25 @@ class Stats():
                     kill_mat[i+1][players.index(victim)+1] = num
             kill_mat[i+1][i+1] = ''
         if s_format == 'csv':
-            f.write('Simple Stats\n')
-            f.write('Name,Kills,Assists,Deaths,Damage,Headshot Kills,Backstabs\n')
+            fp.write('Simple Stats\n')
+            fp.write('Name,Kills,Assists,Deaths,Damage,Headshot Kills,Backstabs\n')
             for name, s_dict in simple_stats.items():
-                f.write('%s,%s,%s,%s,%s,%s,%s\n' % (name, s_dict['kills'],
+                fp.write('%s,%s,%s,%s,%s,%s,%s\n' % (name, s_dict['kills'],
                         s_dict['assists'], s_dict['deaths'],
                         s_dict['damage'], s_dict['headshots'],
                         s_dict['backstabs']))
                         
-            f.write('\nAdvanced Stats\n')
-            f.write('Name,Kills,Assists,Deaths,KAPD,KAPM,DMG,DAPD,DAPM,Headshots,Backstabs,Healing\n')
+            fp.write('\nAdvanced Stats\n')
+            fp.write('Name,Kills,Assists,Deaths,KAPD,KAPM,DMG,DAPD,DAPM,Headshots,Backstabs,Healing\n')
             for name, a_dict in adv_stats.items():
-                f.write('%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n' % (name, a_dict['kills'],
+                fp.write('%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n' % (name, a_dict['kills'],
                         a_dict['assists'], a_dict['deaths'], round(a_dict['kapd'], 3), round(a_dict['kapm'], 3),
                         a_dict['damage'], round(a_dict['dapd'], 3), round(a_dict['dapm'], 3), a_dict['headshots'],
                         a_dict['backstabs'], a_dict['healing']))
-            f.write('\nKill Matrix - rows = kills cols = deaths\n')
+            fp.write('\nKill Matrix - rows = kills cols = deaths\n')
             #make the kill matrix
             for row in kill_mat:
-                f.write(u','.join(map(lambda x: unicode(x), row)) + '\n')
-        f.close()
+                fp.write(u','.join(map(lambda x: unicode(x), row)) + '\n')
 
 class TF2LogAggregator():
     def __init__(self):
@@ -262,7 +260,11 @@ class TF2LogAggregator():
                 self.total_stats.team_score(event['winner'])
                 in_round = False
             elif (event['event_name'] == 'world_trigger' and
-                        event['event'] == 'Round_Length'):
+                        event['event'] == 'Round_Stalemate'):
+                in_round = False
+            elif (event['event_name'] == 'world_trigger' and
+                        (event['event'] == 'Round_Length' or
+                         event['event'] == 'Mini_Round_Length')):
                 self.round_stats[round_num-1].length = float(event['seconds'])
             elif event['event_name'] == 'joined_team':
                 if event['team'] not in teams:
@@ -298,3 +300,11 @@ class TF2LogAggregator():
                                 event['target'], last_kill_type)
         self.total_stats.aggregate(self.round_stats[-1])
 
+    def write_stats(self, out_file, **kwargs):
+        fp = codecs.open(out_file, 'w', 'utf8')
+        fp.write('Total Stats\n')
+        self.total_stats.write_stats(fp, **kwargs)
+        for i, round_stats in enumerate(self.round_stats):
+            fp.write('\nRound %d\n' % (i+1))
+            round_stats.write_stats(fp, **kwargs)
+        fp.close()
