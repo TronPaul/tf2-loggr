@@ -15,6 +15,7 @@ class Stats():
         {id(attkr):{id(victim):num_kills}
         """
         self.id_kill_matrix = {}
+        self.id_hs = {}
         self.id_assist_matrix = {}
         """
         id to suicide matrix
@@ -66,6 +67,7 @@ class Stats():
                 other.id_pick_ups)
         aggregate_dict(self.score,
                 other.score)
+        aggregate_dict(self.id_hs, other.id_hs)
         self.id_name.update(other.id_name)
         self.id_team.update(other.id_team)
         self.length += other.length
@@ -88,6 +90,10 @@ class Stats():
             #fucking dead ringer
             if k_type == 'feign_death':
                 return
+            elif k_type == 'headshot':
+                if attacker['steamid'] not in self.id_hs:
+                    self.id_hs[attacker['steamid']] = 0
+                self.id_hs[attacker['steamid']] += 1
         if attacker['steamid'] not in self.id_kill_matrix:
             self.id_kill_matrix[attacker['steamid']] = {}
         attacker_dict = self.id_kill_matrix[attacker['steamid']]
@@ -155,6 +161,8 @@ class Stats():
         stats['assists'] = (sum(self.id_assist_matrix[player].values())
                 if player in self.id_assist_matrix else 0)
         stats['damage'] = self.id_damage.get(player, 0)
+        stats['headshots'] = (0 if player not in self.id_hs else
+                self.id_hs[player])
         return stats
 
     def get_advanced_player_stats(self, player):
@@ -164,11 +172,15 @@ class Stats():
         stats['deaths'] = sum(self.get_player_deaths(player).values())
         stats['assists'] = (sum(self.id_assist_matrix[player].values())
                 if player in self.id_assist_matrix else 0)
-        stats['kapd'] = (stats['kills'] + stats['assists']) / float(stats['deaths'])
+        stats['kapd'] = (stats['kills'] + stats['assists']) / (float(stats['deaths']) 
+                if stats['deaths'] != 0 else 1)
         stats['kapm'] = ((stats['kills'] + stats['assists']) / (self.length/60))
         stats['damage'] = self.id_damage.get(player, 0)
-        stats['dapd'] = stats['damage'] / stats['deaths']
+        stats['dapd'] = stats['damage'] / (float(stats['deaths']) 
+                if stats['deaths'] != 0 else 1)
         stats['dapm'] = stats['damage'] / (self.length/60)
+        stats['headshots'] = (0 if player not in self.id_hs else
+                self.id_hs[player])
         stats['healing'] = (sum(self.id_heal_matrix[player].values())
                 if player in self.id_heal_matrix else 0)
         return stats
@@ -202,23 +214,24 @@ class Stats():
             kill_mat[i+1][i+1] = ''
         if s_format == 'csv':
             f.write('Simple Stats\n')
-            f.write('Name,Kills,Assists,Deaths,Damage\n')
+            f.write('Name,Kills,Assists,Deaths,Damage,Headshot Kills\n')
             for name, s_dict in simple_stats.items():
-                f.write('%s,%s,%s,%s,%s\n' % (name, s_dict['kills'],
+                f.write('%s,%s,%s,%s,%s,%s\n' % (name, s_dict['kills'],
                         s_dict['assists'], s_dict['deaths'],
-                        s_dict['damage']))
+                        s_dict['damage'], s_dict['headshots']))
                         
             f.write('\nAdvanced Stats\n')
-            f.write('Name,Kills,Assists,Deaths,KAPD,KAPM,DMG,DAPD,DAPM,Healing\n')
+            f.write('Name,Kills,Assists,Deaths,KAPD,KAPM,DMG,DAPD,DAPM,Headshots,Healing\n')
             for name, a_dict in adv_stats.items():
-                f.write('%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n' % (name, a_dict['kills'],
+                f.write('%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n' % (name, a_dict['kills'],
                         a_dict['assists'], a_dict['deaths'], a_dict['kapd'], a_dict['kapm'],
-                        a_dict['damage'], a_dict['dapd'], a_dict['dapm'], a_dict['healing']))
-                        
+                        a_dict['damage'], a_dict['dapd'], a_dict['dapm'], a_dict['headshots'],
+                        a_dict['healing']))
             f.write('\nKill Matrix - rows = kills cols = deaths\n')
             #make the kill matrix
             for row in kill_mat:
                 f.write(u','.join(map(lambda x: unicode(x), row)) + '\n')
+        f.close()
 
 class TF2LogAggregator():
     def __init__(self):
