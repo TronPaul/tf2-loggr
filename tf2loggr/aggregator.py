@@ -227,7 +227,7 @@ class TF2LogAggregator():
                 round_num += 1
                 self.round_stats.append(Stats())
             elif (event['event_name'] == 'world_trigger' and
-                        event['event'] == 'Round_Win'):
+                        (event['event'] == 'Round_Win'):
                 self.total_stats.team_score(event['winner'])
                 in_round = False
             elif (event['event_name'] == 'world_trigger' and
