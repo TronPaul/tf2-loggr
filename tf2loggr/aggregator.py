@@ -231,6 +231,9 @@ class TF2LogAggregator():
                 self.total_stats.team_score(event['winner'])
                 in_round = False
             elif (event['event_name'] == 'world_trigger' and
+                        event['event'] == 'Round_Stalemate'):
+                in_round = False
+            elif (event['event_name'] == 'world_trigger' and
                         event['event'] == 'Round_Length'):
                 self.round_stats[round_num-1].length = float(event['seconds'])
             elif event['event_name'] == 'joined_team':
