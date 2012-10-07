@@ -35,7 +35,7 @@ class Stats():
         self.id_pick_ups = {}
         self.score = {}
         self.length = 0
-
+        
     def __getattr__(self, name):
         if name == 'winner':
             return max(self.score.iteritems(), key=lambda x: x[1])[0]
@@ -157,15 +157,33 @@ class Stats():
         stats['damage'] = self.id_damage.get(player, 0)
         return stats
 
+    def get_advanced_player_stats(self, player):
+        stats = {}
+        stats['kills'] = (sum(self.id_kill_matrix[player].values())
+                if player in self.id_kill_matrix else 0)
+        stats['deaths'] = sum(self.get_player_deaths(player).values())
+        stats['assists'] = (sum(self.id_assist_matrix[player].values())
+                if player in self.id_assist_matrix else 0)
+        stats['kapd'] = (stats['kills'] + stats['assists']) / float(stats['deaths'])
+        stats['kapm'] = ((stats['kills'] + stats['assists']) / (self.length/60))
+        stats['damage'] = self.id_damage.get(player, 0)
+        stats['dapd'] = stats['damage'] / stats['deaths']
+        stats['dapm'] = stats['damage'] / (self.length/60)
+        stats['healing'] = (sum(self.id_heal_matrix[player].values())
+                if player in self.id_heal_matrix else 0)
+        return stats
+        
     def get_team_stats(self, team):
         pass
-
+        
     def write_stats(self, out_file, s_format='json'):
         f = codecs.open(out_file, 'w', 'utf-8')
         #simple stats
         simple_stats = {}
+        adv_stats = {}
         for steamid, name in self.id_name.items():
             simple_stats[name] = self.get_simple_player_stats(steamid)
+            adv_stats[name] = self.get_advanced_player_stats(steamid)
         #kill matrix
         def cmp_player(player_id):
             return (self.id_team[player_id], self.id_name[player_id])
@@ -189,6 +207,14 @@ class Stats():
                 f.write('%s,%s,%s,%s,%s\n' % (name, s_dict['kills'],
                         s_dict['assists'], s_dict['deaths'],
                         s_dict['damage']))
+                        
+            f.write('\nAdvanced Stats\n')
+            f.write('Name,Kills,Assists,Deaths,KAPD,KAPM,DMG,DAPD,DAPM,Healing\n')
+            for name, a_dict in adv_stats.items():
+                f.write('%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n' % (name, a_dict['kills'],
+                        a_dict['assists'], a_dict['deaths'], a_dict['kapd'], a_dict['kapm'],
+                        a_dict['damage'], a_dict['dapd'], a_dict['dapm'], a_dict['healing']))
+                        
             f.write('\nKill Matrix - rows = kills cols = deaths\n')
             #make the kill matrix
             for row in kill_mat:
