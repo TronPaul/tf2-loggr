@@ -170,28 +170,19 @@ class Stats():
                 self.id_hs[player])
         stats['backstabs'] = (0 if player not in self.id_bs else
                 self.id_bs[player])
+        stats['healing'] = (sum(self.id_heal_matrix[player].values())
+                if player in self.id_heal_matrix else 0)
         return stats
 
     def get_advanced_player_stats(self, player):
-        stats = {}
-        stats['kills'] = (sum(self.id_kill_matrix[player].values())
-                if player in self.id_kill_matrix else 0)
-        stats['deaths'] = sum(self.get_player_deaths(player).values())
-        stats['assists'] = (sum(self.id_assist_matrix[player].values())
-                if player in self.id_assist_matrix else 0)
+        stats = self.get_simple_player_stats(player)
         stats['kapd'] = (stats['kills'] + stats['assists']) / (float(stats['deaths']) 
                 if stats['deaths'] != 0 else 1)
         stats['kapm'] = ((stats['kills'] + stats['assists']) / (self.length/60))
-        stats['damage'] = self.id_damage.get(player, 0)
         stats['dapd'] = stats['damage'] / (float(stats['deaths']) 
                 if stats['deaths'] != 0 else 1)
         stats['dapm'] = stats['damage'] / (self.length/60)
-        stats['headshots'] = (0 if player not in self.id_hs else
-                self.id_hs[player])
-        stats['backstabs'] = (0 if player not in self.id_bs else
-                self.id_bs[player])
-        stats['healing'] = (sum(self.id_heal_matrix[player].values())
-                if player in self.id_heal_matrix else 0)
+
         return stats
         
     def get_team_stats(self, team):
@@ -234,8 +225,8 @@ class Stats():
             f.write('Name,Kills,Assists,Deaths,KAPD,KAPM,DMG,DAPD,DAPM,Headshots,Backstabs,Healing\n')
             for name, a_dict in adv_stats.items():
                 f.write('%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n' % (name, a_dict['kills'],
-                        a_dict['assists'], a_dict['deaths'], a_dict['kapd'], a_dict['kapm'],
-                        a_dict['damage'], a_dict['dapd'], a_dict['dapm'], a_dict['headshots'],
+                        a_dict['assists'], a_dict['deaths'], round(a_dict['kapd'], 3), round(a_dict['kapm'], 3),
+                        a_dict['damage'], round(a_dict['dapd'], 3), round(a_dict['dapm'], 3), a_dict['headshots'],
                         a_dict['backstabs'], a_dict['healing']))
             f.write('\nKill Matrix - rows = kills cols = deaths\n')
             #make the kill matrix
