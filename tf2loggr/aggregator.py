@@ -16,6 +16,7 @@ class Stats():
         """
         self.id_kill_matrix = {}
         self.id_hs = {}
+        self.id_bs = {}
         self.id_assist_matrix = {}
         """
         id to suicide matrix
@@ -94,6 +95,10 @@ class Stats():
                 if attacker['steamid'] not in self.id_hs:
                     self.id_hs[attacker['steamid']] = 0
                 self.id_hs[attacker['steamid']] += 1
+            elif k_type == 'backstab':
+                if attacker['steamid'] not in self.id_hs:
+                    self.id_bs[attacker['steamid']] = 0
+                self.id_bs[attacker['steamid']] += 1
         if attacker['steamid'] not in self.id_kill_matrix:
             self.id_kill_matrix[attacker['steamid']] = {}
         attacker_dict = self.id_kill_matrix[attacker['steamid']]
@@ -163,6 +168,8 @@ class Stats():
         stats['damage'] = self.id_damage.get(player, 0)
         stats['headshots'] = (0 if player not in self.id_hs else
                 self.id_hs[player])
+        stats['backstabs'] = (0 if player not in self.id_bs else
+                self.id_bs[player])
         return stats
 
     def get_advanced_player_stats(self, player):
@@ -181,6 +188,8 @@ class Stats():
         stats['dapm'] = stats['damage'] / (self.length/60)
         stats['headshots'] = (0 if player not in self.id_hs else
                 self.id_hs[player])
+        stats['backstabs'] = (0 if player not in self.id_bs else
+                self.id_bs[player])
         stats['healing'] = (sum(self.id_heal_matrix[player].values())
                 if player in self.id_heal_matrix else 0)
         return stats
@@ -214,19 +223,20 @@ class Stats():
             kill_mat[i+1][i+1] = ''
         if s_format == 'csv':
             f.write('Simple Stats\n')
-            f.write('Name,Kills,Assists,Deaths,Damage,Headshot Kills\n')
+            f.write('Name,Kills,Assists,Deaths,Damage,Headshot Kills,Backstabs\n')
             for name, s_dict in simple_stats.items():
-                f.write('%s,%s,%s,%s,%s,%s\n' % (name, s_dict['kills'],
+                f.write('%s,%s,%s,%s,%s,%s,%s\n' % (name, s_dict['kills'],
                         s_dict['assists'], s_dict['deaths'],
-                        s_dict['damage'], s_dict['headshots']))
+                        s_dict['damage'], s_dict['headshots'],
+                        s_dict['backstabs']))
                         
             f.write('\nAdvanced Stats\n')
-            f.write('Name,Kills,Assists,Deaths,KAPD,KAPM,DMG,DAPD,DAPM,Headshots,Healing\n')
+            f.write('Name,Kills,Assists,Deaths,KAPD,KAPM,DMG,DAPD,DAPM,Headshots,Backstabs,Healing\n')
             for name, a_dict in adv_stats.items():
-                f.write('%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n' % (name, a_dict['kills'],
+                f.write('%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n' % (name, a_dict['kills'],
                         a_dict['assists'], a_dict['deaths'], a_dict['kapd'], a_dict['kapm'],
                         a_dict['damage'], a_dict['dapd'], a_dict['dapm'], a_dict['headshots'],
-                        a_dict['healing']))
+                        a_dict['backstabs'], a_dict['healing']))
             f.write('\nKill Matrix - rows = kills cols = deaths\n')
             #make the kill matrix
             for row in kill_mat:
