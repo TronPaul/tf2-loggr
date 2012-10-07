@@ -234,7 +234,8 @@ class TF2LogAggregator():
                         event['event'] == 'Round_Stalemate'):
                 in_round = False
             elif (event['event_name'] == 'world_trigger' and
-                        event['event'] == 'Round_Length'):
+                        (event['event'] == 'Round_Length' or
+                         event['event'] == 'Mini_Round_Length')):
                 self.round_stats[round_num-1].length = float(event['seconds'])
             elif event['event_name'] == 'joined_team':
                 if event['team'] not in teams:
