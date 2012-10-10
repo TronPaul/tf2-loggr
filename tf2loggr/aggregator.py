@@ -16,6 +16,7 @@ class Stats():
         """
         self.id_kill_matrix = {}
         self.id_hs = {}
+        self.id_bs = {}
         self.id_assist_matrix = {}
         """
         id to suicide matrix
@@ -36,7 +37,7 @@ class Stats():
         self.id_pick_ups = {}
         self.score = {}
         self.length = 0
-
+        
     def __getattr__(self, name):
         if name == 'winner':
             return max(self.score.iteritems(), key=lambda x: x[1])[0]
@@ -94,6 +95,10 @@ class Stats():
                 if attacker['steamid'] not in self.id_hs:
                     self.id_hs[attacker['steamid']] = 0
                 self.id_hs[attacker['steamid']] += 1
+            elif k_type == 'backstab':
+                if attacker['steamid'] not in self.id_hs:
+                    self.id_bs[attacker['steamid']] = 0
+                self.id_bs[attacker['steamid']] += 1
         if attacker['steamid'] not in self.id_kill_matrix:
             self.id_kill_matrix[attacker['steamid']] = {}
         attacker_dict = self.id_kill_matrix[attacker['steamid']]
@@ -163,16 +168,33 @@ class Stats():
         stats['damage'] = self.id_damage.get(player, 0)
         stats['headshots'] = (0 if player not in self.id_hs else
                 self.id_hs[player])
+        stats['backstabs'] = (0 if player not in self.id_bs else
+                self.id_bs[player])
+        stats['healing'] = (sum(self.id_heal_matrix[player].values())
+                if player in self.id_heal_matrix else 0)
         return stats
 
+    def get_advanced_player_stats(self, player):
+        stats = self.get_simple_player_stats(player)
+        stats['kapd'] = (stats['kills'] + stats['assists']) / (float(stats['deaths']) 
+                if stats['deaths'] != 0 else 1)
+        stats['kapm'] = ((stats['kills'] + stats['assists']) / (self.length/60))
+        stats['dapd'] = stats['damage'] / (float(stats['deaths']) 
+                if stats['deaths'] != 0 else 1)
+        stats['dapm'] = stats['damage'] / (self.length/60)
+
+        return stats
+        
     def get_team_stats(self, team):
         pass
 
     def write_stats(self, fp, s_format='json'):
         #simple stats
         simple_stats = {}
+        adv_stats = {}
         for steamid, name in self.id_name.items():
             simple_stats[name] = self.get_simple_player_stats(steamid)
+            adv_stats[name] = self.get_advanced_player_stats(steamid)
         #kill matrix
         def cmp_player(player_id):
             return (self.id_team[player_id], self.id_name[player_id])
@@ -191,11 +213,20 @@ class Stats():
             kill_mat[i+1][i+1] = ''
         if s_format == 'csv':
             fp.write('Simple Stats\n')
-            fp.write('Name,Kills,Assists,Deaths,Damage,Headshot Kills\n')
+            fp.write('Name,Kills,Assists,Deaths,Damage,Headshot Kills,Backstabs\n')
             for name, s_dict in simple_stats.items():
-                fp.write('%s,%s,%s,%s,%s,%s\n' % (name, s_dict['kills'],
+                fp.write('%s,%s,%s,%s,%s,%s,%s\n' % (name, s_dict['kills'],
                         s_dict['assists'], s_dict['deaths'],
-                        s_dict['damage'], s_dict['headshots']))
+                        s_dict['damage'], s_dict['headshots'],
+                        s_dict['backstabs']))
+                        
+            fp.write('\nAdvanced Stats\n')
+            fp.write('Name,Kills,Assists,Deaths,KAPD,KAPM,DMG,DAPD,DAPM,Headshots,Backstabs,Healing\n')
+            for name, a_dict in adv_stats.items():
+                fp.write('%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n' % (name, a_dict['kills'],
+                        a_dict['assists'], a_dict['deaths'], round(a_dict['kapd'], 3), round(a_dict['kapm'], 3),
+                        a_dict['damage'], round(a_dict['dapd'], 3), round(a_dict['dapm'], 3), a_dict['headshots'],
+                        a_dict['backstabs'], a_dict['healing']))
             fp.write('\nKill Matrix - rows = kills cols = deaths\n')
             #make the kill matrix
             for row in kill_mat:
